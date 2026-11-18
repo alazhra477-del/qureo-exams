@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -340,20 +340,6 @@
                 <!-- الخيارات المتعددة -->
                 <div id="optionsContainer" class="space-y-3">
                     <!-- يتم توليد الخيارات هنا -->
-                </div>
-
-                <!-- محرر كتابة الكود: يظهر في أسئلة البرمجة العملية فقط -->
-                <div id="codingAnswerContainer" class="hidden space-y-3">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-sm font-extrabold text-slate-700"><i class="fa-solid fa-terminal text-emerald-600 ml-1"></i> محرر الكود JavaScript</span>
-                        <span class="text-xs text-slate-500">اكتب الحل بنفسك ثم اضغط تحقق من الحل</span>
-                    </div>
-                    <textarea id="studentCodeInput" spellcheck="false" dir="ltr" class="w-full min-h-[170px] rounded-xl border-2 border-slate-700 bg-slate-950 text-emerald-300 p-4 font-mono text-sm leading-7 text-left focus:outline-none focus:border-blue-500" placeholder="// اكتب الكود هنا..."></textarea>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" id="checkStudentCodeBtn" onclick="checkCodingAnswer()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition"><i class="fa-solid fa-play ml-1"></i> تحقق من الحل</button>
-                        <span id="codingFeedback" class="text-sm font-bold" aria-live="polite"></span>
-                    </div>
-                    <p id="codingHint" class="text-xs text-slate-500"></p>
                 </div>
 
                 <!-- أزرار التنقل بين الأسئلة -->
@@ -736,14 +722,14 @@
         <span id="toastMessage">تم الحفظ بنجاح</span>
     </div>
 
-    <!-- Firebase SDK & منطق التطبيق -->
+    <!-- Firebase SDK & ربط Realtime Database المباشر -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, update, remove, onValue, child } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         // ==========================================
-        // 1. بنك الأسئلة الشامل لمنصة كيرو (17 فصلاً × 8 أسئلة = 136 سؤالاً)
+        // 1. بنك الأسئلة الشامل لمنصة كيرو (17 فصلاً)
         // ==========================================
         const CHAPTERS_DATA = [
             {
@@ -752,7 +738,7 @@
                 desc: "مفهوم البرمجة، الخوارزميات، وأمر الطباعة console.log",
                 questions: [
                     { q: "ما هي وظيفة الأمر console.log() في لغة JavaScript داخل منصة كيرو؟", code: 'console.log("Hello Qureo");', options: ["طباعة النص أو القيمة في شاشة المخرجات", "حذف البيانات من الذاكرة", "إيقاف تشغيل البرنامج", "تغيير لون خلفية الشاشة"], answer: 0 },
-                    { q: "اكتب كود JavaScript لطباعة العبارة التالية في شاشة المخرجات: مرحباً بك في البرمجة", type: "coding", language: "javascript", starterCode: "", expectedOutput: "مرحباً بك في البرمجة", hint: "استخدم الأمر console.log() وضع العبارة النصية بين علامتي تنصيص." },
+                    { q: "أي من الصيغ التالية صحيحة لطباعة عبارة مرحباً بك في البرمجة؟", options: ['console.log("مرحباً بك في البرمجة");', 'console.log(مرحباً بك في البرمجة);', 'print.console("مرحباً بك");', 'log.console["مرحباً بك"];'], answer: 0 },
                     { q: "لماذا نضع النصوص (Strings) بين علامتي تنصيص \" \" في البرمجة؟", options: ["لتمييزها كنصوص وليست أوامر أو متغيرات", "لتكبير حجم الخط فقط", "لجعل الكود يعمل بسرعة أكبر", "لتلوين الشاشة باللون الأزرق"], answer: 0 },
                     { q: "ماذا يطلق على مجموعة الخطوات المنطقية المرتبة لحل مشكلة برمجية؟", options: ["الخوارزمية (Algorithm)", "الفيروسات (Viruses)", "العتاد الصلب (Hardware)", "المتصفح (Browser)"], answer: 0 },
                     { q: "ما هو ناتج تنفيذ الكود التالي؟", code: 'console.log("10 + 5");', options: ["10 + 5", "15", "105", "خطأ برمجي"], answer: 0 },
@@ -1004,33 +990,39 @@
         ];
 
         // ==========================================
-        // 2. تهيئة Firebase وإدارة الحالة السحابية
+        // 2. إعدادات وقاعدة بيانات Realtime Database المباشرة
         // ==========================================
+        // إعدادات مشروعك في Firebase
+        const firebaseConfig = {
+            apiKey: "ضع_مفتاحك_هنا_إن_أردت_أو_اتركه",
+            authDomain: "qureo-exams.firebaseapp.com",
+            databaseURL: "https://qureo-exams-default-rtdb.firebaseio.com",
+            projectId: "qureo-exams",
+            storageBucket: "qureo-exams.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123:web:abc"
+        };
+
         let db = null;
         let auth = null;
         let currentUser = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'qureo-exam-platform';
         
         // حالة التطبيق في الذاكرة
-        let allStudentsData = {}; // خريطة لكل الطلاب من السحابة
+        let allStudentsData = {};
         let currentStudentId = null;
         let currentStudentData = null;
-        let teacherPin = "1234"; // كلمة المرور الافتراضية
+        let teacherPin = "1234";
 
-        // حالة الاختبار الحالي
         let activeChapterId = null;
         let currentQuestionIndex = 0;
-        let activeChapterQuestions = [];
         let userAnswers = [];
         let quizTimerInterval = null;
         let quizSecondsElapsed = 0;
 
-        // دالة تحويل اسم الطالب إلى معرف آمن لقاعدة البيانات
         function normalizeStudentId(name) {
             return name.trim().replace(/\s+/g, '_').replace(/[.#$/[\]]/g, '');
         }
 
-        // تحديث مؤشر الاتصال السحابي
         function updateSyncUI(status, text) {
             const dot = document.getElementById('syncDot');
             const label = document.getElementById('syncText');
@@ -1042,63 +1034,55 @@
             );
         }
 
-        // تشغيل Firebase والمصادقة
-        async function initFirebase() {
+        // تهيئة اتصال Firebase Realtime Database مباشرة
+        function initFirebase() {
             try {
-                if (typeof __firebase_config === 'undefined') {
-                    updateSyncUI('offline', 'وضع المعاينة المحلي');
-                    return;
-                }
-                const firebaseConfig = JSON.parse(__firebase_config);
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                db = getFirestore(app);
+                db = getDatabase(app);
 
                 updateSyncUI('syncing', 'جاري الاتصال بالسحابة...');
 
-                // المصادقة أولاً (RULE 3)
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                currentUser = auth.currentUser;
-                if (currentUser) {
-                    updateSyncUI('online', 'متصل بالسحابة');
-                    listenToStudentsCollection();
-                    loadTeacherSettings();
-                }
+                signInAnonymously(auth)
+                    .then(() => {
+                        currentUser = auth.currentUser;
+                        updateSyncUI('online', 'متصل بالسحابة');
+                        listenToStudentsData();
+                        loadTeacherSettings();
+                    })
+                    .catch((error) => {
+                        console.error("Auth Error:", error);
+                        updateSyncUI('offline', 'خطأ في المصادقة');
+                    });
             } catch (error) {
                 console.error("Firebase Init Error:", error);
                 updateSyncUI('offline', 'تعذر الاتصال السحابي');
             }
         }
 
-        // الاستماع الفوري لبيانات جميع الطلاب من Firestore
-        function listenToStudentsCollection() {
-            if (!db || !currentUser) return;
-            // استخدام المسار العام المعتمد (RULE 1)
-            const studentsCol = collection(db, 'artifacts', appId, 'public', 'data', 'students');
+        // المزامنة الفورية لبيانات الطلاب من Realtime Database
+        function listenToStudentsData() {
+            if (!db) return;
+            const studentsRef = ref(db, 'qureo_students');
             
-            onSnapshot(studentsCol, (snapshot) => {
+            onValue(studentsRef, (snapshot) => {
                 allStudentsData = {};
                 const datalist = document.getElementById('existingStudentsList');
                 if (datalist) datalist.innerHTML = '';
 
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    allStudentsData[docSnap.id] = data;
-                    
-                    // إضافة الاسم لقائمة الإكمال التلقائي
-                    if (datalist && data.name) {
-                        const opt = document.createElement('option');
-                        opt.value = data.name;
-                        datalist.appendChild(opt);
-                    }
-                });
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnap) => {
+                        const data = childSnap.val();
+                        allStudentsData[childSnap.key] = data;
+                        
+                        if (datalist && data.name) {
+                            const opt = document.createElement('option');
+                            opt.value = data.name;
+                            datalist.appendChild(opt);
+                        }
+                    });
+                }
 
-                // تحديث بيانات الطالب الحالي إذا كان مسجلاً
                 if (currentStudentId && allStudentsData[currentStudentId]) {
                     currentStudentData = allStudentsData[currentStudentId];
                     if (!document.getElementById('levelsView').classList.contains('hidden')) {
@@ -1106,41 +1090,37 @@
                     }
                 }
 
-                // تحديث جدول المعلم إذا كان مفتوحاً
                 if (!document.getElementById('teacherView').classList.contains('hidden')) {
                     renderTeacherDashboard();
                 }
             }, (error) => {
-                console.error("Snapshot Error:", error);
-                updateSyncUI('offline', 'خطأ في المزامنة');
+                console.error("Database Read Error:", error);
+                updateSyncUI('offline', 'خطأ في قراءة البيانات');
             });
         }
 
-        // تحميل إعدادات المعلم (كلمة المرور)
-        async function loadTeacherSettings() {
-            if (!db || !currentUser) return;
-            try {
-                const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'teacherConfig');
-                const snap = await getDoc(settingsDoc);
-                if (snap.exists() && snap.data().pin) {
-                    teacherPin = snap.data().pin;
+        // تحميل كلمة مرور المعلم من قاعدة البيانات
+        function loadTeacherSettings() {
+            if (!db) return;
+            const settingsRef = ref(db, 'qureo_settings/teacherPin');
+            get(settingsRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    teacherPin = snapshot.val();
                 }
-            } catch (e) {
-                console.error("Error loading teacher settings:", e);
-            }
+            });
         }
 
-        // حفظ بيانات طالب في Firestore
+        // حفظ بيانات الطالب سحابياً في Realtime Database
         async function saveStudentRecord(studentId, record) {
             allStudentsData[studentId] = record;
             currentStudentData = record;
 
-            if (!db || !currentUser) return;
+            if (!db) return;
             try {
                 updateSyncUI('syncing', 'جاري الحفظ...');
-                const studentRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', studentId);
-                await setDoc(studentRef, record, { merge: true });
-                updateSyncUI('online', 'تم الحفظ سحابياً');
+                const studentRef = ref(db, 'qureo_students/' + studentId);
+                await set(studentRef, record);
+                updateSyncUI('online', 'متصل بالسحابة');
             } catch (error) {
                 console.error("Save Error:", error);
                 updateSyncUI('offline', 'فشل الحفظ السحابي');
@@ -1149,7 +1129,7 @@
         }
 
         // ==========================================
-        // 3. إدارة دخول الطالب وعرض المستويات
+        // 3. إدارة تسجيل دخول الطالب والمستويات
         // ==========================================
         window.handleStudentLogin = async function(e) {
             e.preventDefault();
@@ -1170,12 +1150,11 @@
 
             let record = allStudentsData[studentId];
 
-            // محاولة جلب أحدث نسخة من السحابة مباشرة للتأكد
-            if (db && currentUser) {
+            if (db) {
                 try {
-                    const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', studentId));
+                    const snap = await get(ref(db, 'qureo_students/' + studentId));
                     if (snap.exists()) {
-                        record = snap.data();
+                        record = snap.val();
                     }
                 } catch (err) {
                     console.error(err);
@@ -1183,20 +1162,18 @@
             }
 
             if (record) {
-                // طالب مسجل مسبقاً: زيادة عداد الدخول وتحديث آخر دخول
                 record.loginCount = (record.loginCount || 0) + 1;
                 record.lastLogin = nowISO;
-                record.name = rawName; // تحديث الاسم بالصيغة الأحدث
+                record.name = rawName;
             } else {
-                // طالب جديد: تهيئة السجل بالمستوى 1 مفتوح فقط
                 record = {
                     id: studentId,
                     name: rawName,
                     loginCount: 1,
                     lastLogin: nowISO,
                     unlockedLevel: 1,
-                    scores: {},      // { "1": 8, "2": 6, ... } أعلى درجة لكل فصل
-                    attempts: {}     // { "1": 2, ... } عدد المحاولات لكل فصل
+                    scores: {},
+                    attempts: {}
                 };
             }
 
@@ -1205,7 +1182,6 @@
             btn.disabled = false;
             btn.innerHTML = '<span>دخول إلى لوحة الفصول</span> <i class="fa-solid fa-arrow-left"></i>';
 
-            // تحديث الشريط العلوي
             document.getElementById('navStudentName').textContent = record.name;
             document.getElementById('navStudentInfo').classList.remove('hidden');
             document.getElementById('navStudentInfo').classList.add('flex');
@@ -1246,7 +1222,6 @@
             renderLevelsGrid();
         };
 
-        // رسم بطاقات الفصول الـ 17
         function renderLevelsGrid() {
             if (!currentStudentData) return;
             const grid = document.getElementById('chaptersGrid');
@@ -1255,10 +1230,9 @@
             const unlocked = currentStudentData.unlockedLevel || 1;
             const scores = currentStudentData.scores || {};
             
-            // حساب الإحصائيات
             let passedCount = 0;
             for (let i = 1; i <= 17; i++) {
-                if ((scores[i] || 0) >= 6) passedCount++; // 6 من 8 = 75%
+                if ((scores[i] || 0) >= 6) passedCount++;
             }
 
             document.getElementById('welcomeStudentTitle').textContent = `أهلاً بك، ${currentStudentData.name}`;
@@ -1274,7 +1248,7 @@
                 const isUnlocked = chapter.id <= unlocked;
                 const bestScore = scores[chapter.id];
                 const hasAttempted = bestScore !== undefined;
-                const isPassed = hasAttempted && bestScore >= 6; // 75%
+                const isPassed = hasAttempted && bestScore >= 6;
                 const pct = hasAttempted ? Math.round((bestScore / 8) * 100) : 0;
 
                 const card = document.createElement('div');
@@ -1355,21 +1329,6 @@
 
             activeChapterId = chapterId;
             currentQuestionIndex = 0;
-            // نسخ الأسئلة وخلط ترتيب الاختيارات لكل محاولة، مع تحديث موضع الإجابة الصحيحة.
-            activeChapterQuestions = chapter.questions.map(question => {
-                const copy = { ...question };
-                if (Array.isArray(question.options)) {
-                    const correctOption = question.options[question.answer];
-                    const shuffledOptions = [...question.options];
-                    for (let i = shuffledOptions.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
-                    }
-                    copy.options = shuffledOptions;
-                    copy.answer = shuffledOptions.indexOf(correctOption);
-                }
-                return copy;
-            });
             userAnswers = new Array(chapter.questions.length).fill(null);
 
             hideAllSections();
@@ -1407,10 +1366,9 @@
 
         function renderQuestion() {
             const chapter = CHAPTERS_DATA.find(c => c.id === activeChapterId);
-            const totalQ = activeChapterQuestions.length;
-            const qObj = activeChapterQuestions[currentQuestionIndex];
+            const totalQ = chapter.questions.length;
+            const qObj = chapter.questions[currentQuestionIndex];
 
-            // تحديث العداد وشريط التقدم
             document.getElementById('questionCounterText').textContent = `السؤال ${currentQuestionIndex + 1} من ${totalQ}`;
             const pct = Math.round(((currentQuestionIndex + 1) / totalQ) * 100);
             document.getElementById('quizProgressPercent').textContent = `${pct}%`;
@@ -1419,7 +1377,6 @@
             document.getElementById('qNumberBadge').textContent = currentQuestionIndex + 1;
             document.getElementById('questionText').textContent = qObj.q;
 
-            // عرض الكود البرمجي إن وجد
             const codeContainer = document.getElementById('questionCodeContainer');
             if (qObj.code) {
                 codeContainer.classList.remove('hidden');
@@ -1428,30 +1385,11 @@
                 codeContainer.classList.add('hidden');
             }
 
-            // إظهار محرر الكود في السؤال العملي، أو الاختيارات في السؤال الموضوعي.
             const optionsContainer = document.getElementById('optionsContainer');
-            const codingContainer = document.getElementById('codingAnswerContainer');
-            const isCodingQuestion = qObj.type === 'coding';
-            optionsContainer.classList.toggle('hidden', isCodingQuestion);
-            codingContainer.classList.toggle('hidden', !isCodingQuestion);
             optionsContainer.innerHTML = '';
-
-            if (isCodingQuestion) {
-                const savedAnswer = userAnswers[currentQuestionIndex];
-                const codeInput = document.getElementById('studentCodeInput');
-                codeInput.value = savedAnswer && typeof savedAnswer === 'object' ? savedAnswer.code : (qObj.starterCode || '');
-                codeInput.oninput = () => {
-                    userAnswers[currentQuestionIndex] = { code: codeInput.value, output: '', correct: false, checked: false };
-                    document.getElementById('codingFeedback').textContent = 'تم تعديل الكود؛ اضغط تحقق من الحل مرة أخرى.';
-                    document.getElementById('codingFeedback').className = 'text-sm font-bold text-amber-700';
-                };
-                document.getElementById('codingHint').textContent = qObj.hint || '';
-                document.getElementById('codingFeedback').textContent = savedAnswer && savedAnswer.checked ? (savedAnswer.correct ? 'إجابة صحيحة' : 'لم يطابق الناتج المتوقع، حاول مرة أخرى') : '';
-                document.getElementById('codingFeedback').className = 'text-sm font-bold ' + (savedAnswer && savedAnswer.correct ? 'text-emerald-700' : 'text-rose-600');
-            }
             const letters = ['أ', 'ب', 'ج', 'د'];
 
-            (qObj.options || []).forEach((optText, idx) => {
+            qObj.options.forEach((optText, idx) => {
                 const isSelected = userAnswers[currentQuestionIndex] === idx;
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -1472,7 +1410,6 @@
                 optionsContainer.appendChild(btn);
             });
 
-            // تحديث نقاط التنقل السريع
             const dotsContainer = document.getElementById('questionDots');
             dotsContainer.innerHTML = '';
             for (let i = 0; i < totalQ; i++) {
@@ -1484,11 +1421,9 @@
                     i === currentQuestionIndex ? 'bg-blue-600 scale-125' :
                     answered ? 'bg-emerald-500' : 'bg-slate-300'
                 }`;
-                dot.title = `سؤال ${i + 1}`;
                 dotsContainer.appendChild(dot);
             }
 
-            // أزرار السابق / التالي / التسليم
             document.getElementById('prevQuestionBtn').disabled = currentQuestionIndex === 0;
             
             if (currentQuestionIndex === totalQ - 1) {
@@ -1499,65 +1434,6 @@
                 document.getElementById('submitQuizBtn').classList.add('hidden');
             }
         }
-
-        // تشغيل كود الطالب داخل إطار معزول عن صفحة المنصة، والتقاط console.log فقط.
-        function runStudentJavaScript(sourceCode) {
-            return new Promise((resolve, reject) => {
-                const blocked = /\b(window|document|parent|top|self|globalThis|location|navigator|postMessage|fetch|XMLHttpRequest|WebSocket|Worker|eval|Function|importScripts)\b|\b(setInterval|setTimeout)\s*\(/i;
-                if (sourceCode.length > 4000 || blocked.test(sourceCode)) {
-                    reject(new Error('استخدم أوامر JavaScript التعليمية فقط، وتجنب أوامر المتصفح أو الشبكة.'));
-                    return;
-                }
-                const frame = document.createElement('iframe');
-                frame.setAttribute('sandbox', 'allow-scripts');
-                frame.style.display = 'none';
-                frame.srcdoc = `<!doctype html><html><body><script>
-                    addEventListener('message', function(event) {
-                        if (!event.data || event.data.type !== 'qureo-run') return;
-                        const lines = [];
-                        const safeConsole = { log: (...args) => lines.push(args.map(v => String(v)).join(' ')) };
-                        try { (new Function('console', event.data.code))(safeConsole); parent.postMessage({type:'qureo-result', output:lines.join(String.fromCharCode(10))}, '*'); }
-                        catch (error) { parent.postMessage({type:'qureo-error', message:String(error.message || error)}, '*'); }
-                    });
-                <\/script></body></html>`;
-                document.body.appendChild(frame);
-                const cleanup = () => { window.removeEventListener('message', listener); frame.remove(); };
-                const timer = setTimeout(() => { cleanup(); reject(new Error('تعذر استلام نتيجة التشغيل. تأكد من السماح بتشغيل JavaScript ثم حاول مرة أخرى.')); }, 5000);
-                const listener = event => {
-                    if (event.source !== frame.contentWindow || !event.data || !['qureo-result','qureo-error'].includes(event.data.type)) return;
-                    clearTimeout(timer); cleanup();
-                    if (event.data.type === 'qureo-error') reject(new Error(event.data.message));
-                    else resolve(event.data.output);
-                };
-                window.addEventListener('message', listener);
-                frame.addEventListener('load', () => frame.contentWindow.postMessage({type:'qureo-run', code:sourceCode}, '*'), {once:true});
-            });
-        }
-
-        window.checkCodingAnswer = async function() {
-            const q = activeChapterQuestions[currentQuestionIndex];
-            if (!q || q.type !== 'coding') return;
-            const code = document.getElementById('studentCodeInput').value;
-            const feedback = document.getElementById('codingFeedback');
-            const button = document.getElementById('checkStudentCodeBtn');
-            button.disabled = true;
-            button.textContent = 'جارٍ التحقق...';
-            try {
-                const output = await runStudentJavaScript(code);
-                const correct = output.trim() === String(q.expectedOutput || '').trim();
-                userAnswers[currentQuestionIndex] = { code, output, correct, checked: true };
-                feedback.textContent = correct ? 'أحسنت! الناتج صحيح، تم تسجيل إجابتك.' : `الناتج الذي ظهر: ${output || '(لا يوجد ناتج)'}`;
-                feedback.className = 'text-sm font-bold ' + (correct ? 'text-emerald-700' : 'text-rose-600');
-                if (!correct) showToast('الناتج غير مطابق بعد، يمكنك تعديل الكود والمحاولة مجدداً.', 'error');
-            } catch (error) {
-                userAnswers[currentQuestionIndex] = { code, output: '', correct: false, checked: false };
-                feedback.textContent = error.message;
-                feedback.className = 'text-sm font-bold text-rose-600';
-            } finally {
-                button.disabled = false;
-                button.innerHTML = '<i class="fa-solid fa-play ml-1"></i> تحقق من الحل';
-            }
-        };
 
         function selectOption(optionIdx) {
             userAnswers[currentQuestionIndex] = optionIdx;
@@ -1588,14 +1464,10 @@
         };
 
         // ==========================================
-        // 5. تصحيح الاختبار وحساب النتيجة وفتح المستوى
+        // 5. تصحيح الاختبار وحفظ النتيجة
         // ==========================================
         window.submitQuiz = async function() {
-            // التحقق من الإجابة على جميع الأسئلة
-            const unansweredIndex = userAnswers.findIndex((ans, idx) => {
-                const q = activeChapterQuestions[idx];
-                return ans === null || (q && q.type === 'coding' && (!ans || !ans.checked));
-            });
+            const unansweredIndex = userAnswers.findIndex(ans => ans === null);
             if (unansweredIndex !== -1) {
                 showToast(`يرجى الإجابة على السؤال رقم ${unansweredIndex + 1} قبل التسليم!`, 'error');
                 currentQuestionIndex = unansweredIndex;
@@ -1606,24 +1478,22 @@
             stopQuizTimer();
 
             const chapter = CHAPTERS_DATA.find(c => c.id === activeChapterId);
-            const totalQ = activeChapterQuestions.length;
+            const totalQ = chapter.questions.length;
             let score = 0;
 
-            activeChapterQuestions.forEach((q, idx) => {
-                if (q.type === 'coding' ? !!(userAnswers[idx] && userAnswers[idx].checked && userAnswers[idx].correct) : userAnswers[idx] === q.answer) {
+            chapter.questions.forEach((q, idx) => {
+                if (userAnswers[idx] === q.answer) {
                     score++;
                 }
             });
 
             const percentage = Math.round((score / totalQ) * 100);
-            const isPassed = percentage >= 75; // شرط النجاح 75% (6 من 8)
+            const isPassed = percentage >= 75;
 
-            // تحديث سجل الطالب
             if (currentStudentData) {
                 if (!currentStudentData.scores) currentStudentData.scores = {};
                 if (!currentStudentData.attempts) currentStudentData.attempts = {};
 
-                // تسجيل أعلى درجة حصل عليها الطالب في هذا الفصل
                 const prevBest = currentStudentData.scores[activeChapterId] || 0;
                 if (score > prevBest) {
                     currentStudentData.scores[activeChapterId] = score;
@@ -1631,10 +1501,8 @@
                     currentStudentData.scores[activeChapterId] = score;
                 }
 
-                // زيادة عدد المحاولات لهذا الفصل
                 currentStudentData.attempts[activeChapterId] = (currentStudentData.attempts[activeChapterId] || 0) + 1;
 
-                // فتح الفصل التالي إذا نجح بنسبة 75% فأكثر
                 let newlyUnlocked = false;
                 if (isPassed && activeChapterId < 17) {
                     if ((currentStudentData.unlockedLevel || 1) <= activeChapterId) {
@@ -1693,13 +1561,12 @@
                 nextBtn.classList.add('hidden');
             }
 
-            // عرض مراجعة الإجابات التفصيلية
             const reviewContainer = document.getElementById('answersReviewContainer');
             reviewContainer.innerHTML = '';
 
-            activeChapterQuestions.forEach((q, idx) => {
+            chapter.questions.forEach((q, idx) => {
                 const userAns = userAnswers[idx];
-                const isCorrect = q.type === 'coding' ? !!(userAns && userAns.checked && userAns.correct) : userAns === q.answer;
+                const isCorrect = userAns === q.answer;
                 const item = document.createElement('div');
                 item.className = `p-4 rounded-2xl border ${isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'}`;
 
@@ -1710,14 +1577,14 @@
                         </span>
                         <div class="space-y-1.5 flex-grow text-sm">
                             <div class="font-bold text-slate-800">${idx + 1}. ${escapeHTML(q.q)}</div>
-                            ${q.type === 'coding' ? `
-                                <div class="text-xs text-slate-700 font-bold">الكود الذي كتبه الطالب:</div>
-                                <pre class="code-block text-xs">${escapeHTML(userAns && userAns.code ? userAns.code : '')}</pre>
-                                <div class="text-xs text-slate-600">الناتج: ${escapeHTML(userAns && userAns.output ? userAns.output : 'لم يتم إنتاج ناتج')}</div>
-                            ` : `
-                                <div class="text-xs ${isCorrect ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'}">إجابتك: ${escapeHTML(q.options[userAns])}</div>
-                                ${!isCorrect ? `<div class="text-xs text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-lg inline-block font-bold">الإجابة الصحيحة: ${escapeHTML(q.options[q.answer])}</div>` : ''}
-                            `}
+                            <div class="text-xs ${isCorrect ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'}">
+                                إجابتك: ${escapeHTML(q.options[userAns])}
+                            </div>
+                            ${!isCorrect ? `
+                                <div class="text-xs text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-lg inline-block font-bold">
+                                    الإجابة الصحيحة: ${escapeHTML(q.options[q.answer])}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -1738,7 +1605,7 @@
         };
 
         // ==========================================
-        // 6. لوحة تحكم المعلم والطباعة والتصدير
+        // 6. لوحة تحكم المعلم وإدارتها
         // ==========================================
         window.openTeacherModal = function() {
             document.getElementById('teacherPinInput').value = '';
@@ -1763,7 +1630,6 @@
             hideAllSections();
             document.getElementById('teacherView').classList.remove('hidden');
             
-            // تحديث تاريخ الطباعة
             document.getElementById('printDateSpan').textContent = new Date().toLocaleDateString('ar-EG', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
             });
@@ -1823,7 +1689,6 @@
                 return String(st.unlockedLevel || 1) === levelFilter;
             });
 
-            // ترتيب الطلاب تنازلياً حسب أعلى مستوى ثم المجموع
             filtered.sort((a, b) => (b.unlockedLevel || 1) - (a.unlockedLevel || 1));
 
             if (filtered.length === 0) {
@@ -1886,16 +1751,15 @@
             });
         };
 
-        // حذف سجل طالب
         window.confirmDeleteStudent = function(studentId, studentName) {
             openConfirmModal(
                 'حذف سجل الطالب',
                 `هل أنت متأكد من حذف جميع درجات وبيانات الطالب "${studentName}"؟ سيبدأ الطالب من الفصل الأول عند دخوله القادم.`,
                 async () => {
                     delete allStudentsData[studentId];
-                    if (db && currentUser) {
+                    if (db) {
                         try {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', studentId));
+                            await remove(ref(db, 'qureo_students/' + studentId));
                         } catch (e) {
                             console.error(e);
                         }
@@ -1906,7 +1770,6 @@
             );
         };
 
-        // تغيير كلمة مرور المعلم
         window.openChangePinModal = function() {
             document.getElementById('newTeacherPinInput').value = teacherPin;
             openModal('changePinModal');
@@ -1918,9 +1781,9 @@
             if (newPin.length < 4) return;
             teacherPin = newPin;
 
-            if (db && currentUser) {
+            if (db) {
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'teacherConfig'), { pin: newPin });
+                    await set(ref(db, 'qureo_settings/teacherPin'), newPin);
                 } catch (err) {
                     console.error(err);
                 }
@@ -1929,7 +1792,6 @@
             showToast('تم تحديث كلمة مرور المعلم بنجاح');
         };
 
-        // تصدير البيانات إلى Excel / CSV
         window.exportToCSV = function() {
             const students = Object.values(allStudentsData);
             if (students.length === 0) {
@@ -1969,7 +1831,6 @@
                 csvRows.push(row.join(','));
             });
 
-            // إضافة BOM لدعم اللغة العربية في برنامج Excel
             const csvString = '\uFEFF' + csvRows.join('\n');
             const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -1983,7 +1844,7 @@
         };
 
         // ==========================================
-        // 7. أدوات مساعدة للواجهة (Modals & Toast)
+        // 7. دوال مساعدة للواجهة
         // ==========================================
         window.openModal = function(id) {
             const el = document.getElementById(id);
@@ -2033,7 +1894,6 @@
                 .replace(/"/g, '&quot;');
         }
 
-        // بدء التشغيل عند تحميل الصفحة
         window.addEventListener('DOMContentLoaded', () => {
             initFirebase();
         });
