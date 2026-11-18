@@ -383,32 +383,38 @@
             loadQuestion();
         }
 
-        function loadQuestion() {
-            const chapter = chaptersData[currentChapterId - 1];
-            const q = chapter.questions[currentQuestionIdx];
-            
-            document.getElementById('quizChapterBadge').innerText = `الفصل ${chapter.id}`;
-            document.getElementById('quizChapterTitle').innerText = chapter.title;
-            document.getElementById('qNumberBadge').innerText = q.id;
-            document.getElementById('questionText').innerText = q.text;
-            document.getElementById('questionCounterText').innerText = `السؤال ${currentQuestionIdx + 1} من 8`;
+function loadQuestion() {
+    const chapter = chaptersData[currentChapterId - 1];
+    const q = chapter.questions[currentQuestionIdx];
+    
+    document.getElementById('quizChapterBadge').innerText = `الفصل ${chapter.id}`;
+    document.getElementById('quizChapterTitle').innerText = chapter.title;
+    document.getElementById('qNumberBadge').innerText = q.id;
+    document.getElementById('questionText').innerText = q.text;
+    document.getElementById('questionCounterText').innerText = `السؤال ${currentQuestionIdx + 1} من 8`;
 
-            const optContainer = document.getElementById('optionsContainer');
-            optContainer.innerHTML = '';
-            q.options.forEach((opt, idx) => {
-                const isSelected = studentAnswers[currentQuestionIdx] === idx;
-                optContainer.innerHTML += `
-                    <label class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 hover:bg-slate-50'}">
-                        <input type="radio" name="qOpt" value="${idx}" ${isSelected ? 'checked' : ''} onchange="selectOption(${idx})" class="w-4 h-4 text-blue-600">
-                        <span class="font-medium text-slate-700">${opt}</span>
-                    </label>
-                `;
-            });
+    // حساب نسبة التقدم وتحديث الشريط
+    const progressPercent = ((currentQuestionIdx + 1) / 8) * 100;
+    
+    const optContainer = document.getElementById('optionsContainer');
+    optContainer.innerHTML = ''; // تفريغ الخيارات القديمة
+    
+    // توليد الخيارات المتعددة لكل سؤال
+    q.options.forEach((opt, idx) => {
+        const isSelected = studentAnswers[currentQuestionIdx] === idx;
+        optContainer.innerHTML += `
+            <label class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${isSelected ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}">
+                <input type="radio" name="qOpt" value="${idx}" ${isSelected ? 'checked' : ''} onchange="selectOption(${idx})" class="w-4 h-4 text-blue-600">
+                <span class="font-medium text-slate-700 text-base">${opt}</span>
+            </label>
+        `;
+    });
 
-            document.getElementById('submitQuizBtn').classList.toggle('hidden', currentQuestionIdx !== 7);
-            document.getElementById('nextQuestionBtn').classList.toggle('hidden', currentQuestionIdx === 7);
-        }
-
+    // التحكم في ظهور أزرار التالي وإنهاء الاختبار
+    document.getElementById('submitQuizBtn').classList.toggle('hidden', currentQuestionIdx !== 7);
+    document.getElementById('nextQuestionBtn').classList.toggle('hidden', currentQuestionIdx === 7);
+    document.getElementById('prevQuestionBtn').disabled = currentQuestionIdx === 0;
+}
         function selectOption(idx) {
             studentAnswers[currentQuestionIdx] = idx;
         }
