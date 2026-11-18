@@ -183,8 +183,7 @@
 
             <div id="chaptersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
         </section>
-
-        <!-- 3. شاشة الاختبار التفاعلي -->
+<!-- 3. شاشة الاختبار التفاعلي -->
         <section id="quizView" class="hidden max-w-3xl mx-auto space-y-5">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 flex items-center justify-between">
                 <button onclick="showLevelsView()" class="text-slate-500 hover:text-slate-800 text-sm font-bold flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl transition">
@@ -193,6 +192,8 @@
                 <div class="text-center">
                     <span class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full" id="quizChapterBadge">الفصل 1</span>
                     <h2 class="text-base sm:text-lg font-extrabold text-slate-800 mt-1" id="quizChapterTitle">عنوان الفصل</h2>
+                    <!-- العنصر المفقود الذي تم إضافته لحل المشكلة -->
+                    <span id="questionCounterText" class="text-xs text-slate-500 font-medium block mt-1">السؤال 1 من 8</span>
                 </div>
                 <div id="quizTimer" class="font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-xl">00:00</div>
             </div>
