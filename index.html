@@ -1006,8 +1006,6 @@
         // ==========================================
         // 2. إعداد Firebase + الحفظ المحلي + قائمة المزامنة
         // ==========================================
-        // الصق هنا إعدادات Web App الحقيقية من Firebase Console > Project settings > Your apps.
-        // القيم الموجودة أدناه أمثلة غير صالحة للاتصال، لذلك سيعمل الموقع في وضع الحفظ المحلي حتى تستبدلها.
         const firebaseConfig = {
             apiKey: "REPLACE_WITH_REAL_API_KEY",
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -1148,7 +1146,6 @@
             );
         }
 
-        // مزامنة السجلات المحفوظة محلياً إلى Realtime Database عند توفر الاتصال.
         async function syncPendingRecords() {
             if (!db || !currentUser || !navigator.onLine || syncInProgress) return;
             syncInProgress = true;
@@ -1170,7 +1167,6 @@
                         await set(ref(db, `${STUDENTS_PATH}/${studentId}`), operation.record);
                     }
 
-                    // لا نحذف التحديث الأحدث إذا عُدّل السجل أثناء المزامنة.
                     queue = loadPendingWrites();
                     if (queue[studentId] && queue[studentId].changedAt === operation.changedAt) {
                         delete queue[studentId];
@@ -1232,7 +1228,6 @@
                     });
                 }
 
-                // السحابة هي المصدر الأحدث للسجلات الموجودة، مع الإبقاء على السجلات المحلية الجديدة.
                 const localStudents = readLocalJSON(LOCAL_STUDENTS_KEY, {}) || {};
                 const merged = { ...localStudents, ...remoteStudents };
                 const pending = loadPendingWrites();
@@ -1270,7 +1265,6 @@
             }
         }
 
-        // الحفظ المحلي يحدث أولاً دائماً، ثم تُضاف نسخة للمزامنة السحابية.
         async function saveStudentRecord(studentId, record) {
             allStudentsData[studentId] = record;
             currentStudentData = record;
@@ -1294,6 +1288,7 @@
         window.addEventListener('offline', () => {
             updateSyncUI('offline', 'انقطع الإنترنت - ستُحفظ النتائج على هذا الجهاز');
         });
+
         // ==========================================
         // 3. إدارة دخول الطالب وعرض المستويات
         // ==========================================
@@ -1317,7 +1312,6 @@
             let record = allStudentsData[studentId];
             const hasPendingLocalChange = !!loadPendingWrites()[studentId];
 
-            // جلب أحدث سجل من السحابة، إلا إذا كان هناك تحديث محلي لم تتم مزامنته بعد.
             if (db && currentUser && navigator.onLine && !hasPendingLocalChange) {
                 try {
                     const snap = await get(ref(db, `${STUDENTS_PATH}/${studentId}`));
@@ -1328,20 +1322,18 @@
             }
 
             if (record) {
-                // طالب مسجل مسبقاً: زيادة عداد الدخول وتحديث آخر دخول
                 record.loginCount = (record.loginCount || 0) + 1;
                 record.lastLogin = nowISO;
-                record.name = rawName; // تحديث الاسم بالصيغة الأحدث
+                record.name = rawName;
             } else {
-                // طالب جديد: تهيئة السجل بالمستوى 1 مفتوح فقط
                 record = {
                     id: studentId,
                     name: rawName,
                     loginCount: 1,
                     lastLogin: nowISO,
                     unlockedLevel: 1,
-                    scores: {},      // { "1": 8, "2": 6, ... } أعلى درجة لكل فصل
-                    attempts: {}     // { "1": 2, ... } عدد المحاولات لكل فصل
+                    scores: {},
+                    attempts: {}
                 };
             }
 
@@ -1350,7 +1342,6 @@
             btn.disabled = false;
             btn.innerHTML = '<span>دخول إلى لوحة الفصول</span> <i class="fa-solid fa-arrow-left"></i>';
 
-            // تحديث الشريط العلوي
             document.getElementById('navStudentName').textContent = record.name;
             document.getElementById('navStudentInfo').classList.remove('hidden');
             document.getElementById('navStudentInfo').classList.add('flex');
@@ -1393,7 +1384,6 @@
             renderLevelsGrid();
         };
 
-        // رسم بطاقات الفصول الـ 17
         function renderLevelsGrid() {
             if (!currentStudentData) return;
             const grid = document.getElementById('chaptersGrid');
@@ -1402,10 +1392,9 @@
             const unlocked = currentStudentData.unlockedLevel || 1;
             const scores = currentStudentData.scores || {};
             
-            // حساب الإحصائيات
             let passedCount = 0;
             for (let i = 1; i <= 17; i++) {
-                if ((scores[i] || 0) >= 6) passedCount++; // 6 من 8 = 75%
+                if ((scores[i] || 0) >= 6) passedCount++;
             }
 
             document.getElementById('welcomeStudentTitle').textContent = `أهلاً بك، ${currentStudentData.name}`;
@@ -1421,7 +1410,7 @@
                 const isUnlocked = chapter.id <= unlocked;
                 const bestScore = scores[chapter.id];
                 const hasAttempted = bestScore !== undefined;
-                const isPassed = hasAttempted && bestScore >= 6; // 75%
+                const isPassed = hasAttempted && bestScore >= 6;
                 const pct = hasAttempted ? Math.round((bestScore / 8) * 100) : 0;
 
                 const card = document.createElement('div');
@@ -1502,7 +1491,6 @@
 
             activeChapterId = chapterId;
             currentQuestionIndex = 0;
-            // نسخ الأسئلة وخلط ترتيب الاختيارات لكل محاولة، مع تحديث موضع الإجابة الصحيحة.
             activeChapterQuestions = chapter.questions.map(question => {
                 const copy = { ...question };
                 if (Array.isArray(question.options)) {
@@ -1557,7 +1545,6 @@
             const totalQ = activeChapterQuestions.length;
             const qObj = activeChapterQuestions[currentQuestionIndex];
 
-            // تحديث العداد وشريط التقدم
             document.getElementById('questionCounterText').textContent = `السؤال ${currentQuestionIndex + 1} من ${totalQ}`;
             const pct = Math.round(((currentQuestionIndex + 1) / totalQ) * 100);
             document.getElementById('quizProgressPercent').textContent = `${pct}%`;
@@ -1566,7 +1553,6 @@
             document.getElementById('qNumberBadge').textContent = currentQuestionIndex + 1;
             document.getElementById('questionText').textContent = qObj.q;
 
-            // عرض الكود البرمجي إن وجد
             const codeContainer = document.getElementById('questionCodeContainer');
             if (qObj.code) {
                 codeContainer.classList.remove('hidden');
@@ -1575,7 +1561,6 @@
                 codeContainer.classList.add('hidden');
             }
 
-            // إظهار محرر الكود في السؤال العملي، أو الاختيارات في السؤال الموضوعي.
             const optionsContainer = document.getElementById('optionsContainer');
             const codingContainer = document.getElementById('codingAnswerContainer');
             const isCodingQuestion = qObj.type === 'coding';
@@ -1619,7 +1604,6 @@
                 optionsContainer.appendChild(btn);
             });
 
-            // تحديث نقاط التنقل السريع
             const dotsContainer = document.getElementById('questionDots');
             dotsContainer.innerHTML = '';
             for (let i = 0; i < totalQ; i++) {
@@ -1635,7 +1619,6 @@
                 dotsContainer.appendChild(dot);
             }
 
-            // أزرار السابق / التالي / التسليم
             document.getElementById('prevQuestionBtn').disabled = currentQuestionIndex === 0;
             
             if (currentQuestionIndex === totalQ - 1) {
@@ -1647,7 +1630,6 @@
             }
         }
 
-        // تشغيل كود الطالب داخل إطار معزول عن صفحة المنصة، والتقاط console.log فقط.
         function runStudentJavaScript(sourceCode) {
             return new Promise((resolve, reject) => {
                 const blocked = /\b(window|document|parent|top|self|globalThis|location|navigator|postMessage|fetch|XMLHttpRequest|WebSocket|Worker|eval|Function|importScripts)\b|\b(setInterval|setTimeout)\s*\(/i;
@@ -1738,7 +1720,6 @@
         // 5. تصحيح الاختبار وحساب النتيجة وفتح المستوى
         // ==========================================
         window.submitQuiz = async function() {
-            // التحقق من الإجابة على جميع الأسئلة
             const unansweredIndex = userAnswers.findIndex((ans, idx) => {
                 const q = activeChapterQuestions[idx];
                 return ans === null || (q && q.type === 'coding' && (!ans || !ans.checked));
@@ -1763,14 +1744,12 @@
             });
 
             const percentage = Math.round((score / totalQ) * 100);
-            const isPassed = percentage >= 75; // شرط النجاح 75% (6 من 8)
+            const isPassed = percentage >= 75;
 
-            // تحديث سجل الطالب
             if (currentStudentData) {
                 if (!currentStudentData.scores) currentStudentData.scores = {};
                 if (!currentStudentData.attempts) currentStudentData.attempts = {};
 
-                // تسجيل أعلى درجة حصل عليها الطالب في هذا الفصل
                 const prevBest = currentStudentData.scores[activeChapterId] || 0;
                 if (score > prevBest) {
                     currentStudentData.scores[activeChapterId] = score;
@@ -1778,10 +1757,8 @@
                     currentStudentData.scores[activeChapterId] = score;
                 }
 
-                // زيادة عدد المحاولات لهذا الفصل
                 currentStudentData.attempts[activeChapterId] = (currentStudentData.attempts[activeChapterId] || 0) + 1;
 
-                // فتح الفصل التالي إذا نجح بنسبة 75% فأكثر
                 let newlyUnlocked = false;
                 if (isPassed && activeChapterId < 17) {
                     if ((currentStudentData.unlockedLevel || 1) <= activeChapterId) {
@@ -1842,7 +1819,6 @@
                 nextBtn.classList.add('hidden');
             }
 
-            // عرض مراجعة الإجابات التفصيلية
             const reviewContainer = document.getElementById('answersReviewContainer');
             reviewContainer.innerHTML = '';
 
@@ -1912,7 +1888,6 @@
             hideAllSections();
             document.getElementById('teacherView').classList.remove('hidden');
             
-            // تحديث تاريخ الطباعة
             document.getElementById('printDateSpan').textContent = new Date().toLocaleDateString('ar-EG', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
             });
@@ -1972,7 +1947,6 @@
                 return String(st.unlockedLevel || 1) === levelFilter;
             });
 
-            // ترتيب الطلاب تنازلياً حسب أعلى مستوى ثم المجموع
             filtered.sort((a, b) => (b.unlockedLevel || 1) - (a.unlockedLevel || 1));
 
             if (filtered.length === 0) {
@@ -2035,7 +2009,6 @@
             });
         };
 
-        // حذف سجل طالب
         window.confirmDeleteStudent = function(studentId, studentName) {
             openConfirmModal(
                 'حذف سجل الطالب',
@@ -2051,7 +2024,6 @@
             );
         };
 
-        // تغيير كلمة مرور المعلم
         window.openChangePinModal = function() {
             document.getElementById('newTeacherPinInput').value = teacherPin;
             openModal('changePinModal');
@@ -2079,7 +2051,6 @@
             showToast('تم تحديث كلمة مرور المعلم محلياً');
         };
 
-        // تصدير البيانات إلى Excel / CSV
         window.exportToCSV = function() {
             const students = Object.values(allStudentsData);
             if (students.length === 0) {
@@ -2119,7 +2090,6 @@
                 csvRows.push(row.join(','));
             });
 
-            // إضافة BOM لدعم اللغة العربية في برنامج Excel
             const csvString = '\uFEFF' + csvRows.join('\n');
             const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
